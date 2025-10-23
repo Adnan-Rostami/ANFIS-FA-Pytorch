@@ -1,0 +1,48 @@
+import torch, numpy as np, pandas as pd, os, time
+from CreateInitialFIS2 import CreateInitialFIS2
+from TrainUsingFA import TrainUsingFA
+from evalfis import evalfis
+from metrics_eval import metrics_eval
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+base_dir = "results_runs"; os.makedirs(base_dir, exist_ok=True)
+run_id = len(os.listdir(base_dir)) + 1
+run_folder = os.path.join(base_dir, f"run_{run_id:03d}")
+os.makedirs(run_folder, exist_ok=True)
+
+train_data = np.loadtxt('data.csv', delimiter=',', skiprows=1)
+test_data  = np.loadtxt('data.csv', delimiter=',', skiprows=1)
+X_train, y_train = train_data[:, :-1], train_data[:, -1]
+X_test,  y_test  = test_data[:, :-1],  test_data[:, -1]
+
+fis_init = CreateInitialFIS2(X_train, y_train, n_clusters=3)
+# best_fis = TrainUsingFA(fis_init, {"Inputs": X_train, "Targets": y_train}, {"MaxIt": 30, "nPop": 30})["bestfis"]
+# best_fis = TrainUsingFA(
+#     fis_init,
+#     {"Inputs": X_train, "Targets": y_train},
+#     {"MaxIt": 3 , "nPop": 30},
+#      "Results"
+# )["bestfis"]
+# train_result = TrainUsingFA(fis_init, {"Inputs": X_train, "Targets": y_train,"TestInputs": X_test, "TestTargets": y_test}, {"MaxIt": 3 , "nPop": 30})
+train_result = TrainUsingFA(fis_init, 
+                            {"Inputs": X_train, "Targets": y_train}, # <-- حذف TestInputs و TestTargets
+                            {"MaxIt": 3 , "nPop": 30})
+best_fis = train_result["bestfis"]
+train_probs = evalfis(X_train, best_fis)
+test_probs  = evalfis(X_test, best_fis)
+print("Shape y_train vs train_probs:", y_train.shape, train_probs.shape)
+
+metrics_train, cm_train = metrics_eval(y_train, train_probs)
+metrics_test, cm_test   = metrics_eval(y_test,  test_probs)
+print("DEBUG FIS KEYS:", fis_init.keys())
+print("DEBUG FIS STRUCTURE:", type(fis_init), fis_init.keys() if isinstance(fis_init, dict) else fis_init)
+print(metrics_test,"  metrics_test")
+pd.DataFrame([  metrics_test], index=[ "test"]).to_csv(
+    os.path.join(run_folder, f"run_{run_id:03d}.csv"), index=True)
+
+cm_expanded = np.vstack([
+    ['', 'Pred_Neg', 'Pred_Pos'],
+    ['True_Neg', cm_test[0,0], cm_test[0,1]],
+    ['True_Pos', cm_test[1,0], cm_test[1,1]],
+])
+pd.DataFrame(cm_expanded).to_csv(os.path.join(run_folder, f"confusion_run_{run_id:03d}.csv"), index=False)
