@@ -16,14 +16,7 @@ X_train, y_train = train_data[:, :-1], train_data[:, -1]
 X_test,  y_test  = test_data[:, :-1],  test_data[:, -1]
 
 fis_init = CreateInitialFIS2(X_train, y_train, n_clusters=3)
-# best_fis = TrainUsingFA(fis_init, {"Inputs": X_train, "Targets": y_train}, {"MaxIt": 30, "nPop": 30})["bestfis"]
-# best_fis = TrainUsingFA(
-#     fis_init,
-#     {"Inputs": X_train, "Targets": y_train},
-#     {"MaxIt": 3 , "nPop": 30},
-#      "Results"
-# )["bestfis"]
-# train_result = TrainUsingFA(fis_init, {"Inputs": X_train, "Targets": y_train,"TestInputs": X_test, "TestTargets": y_test}, {"MaxIt": 3 , "nPop": 30})
+
 train_result = TrainUsingFA(fis_init, 
                             {"Inputs": X_train, "Targets": y_train}, # <-- حذف TestInputs و TestTargets
                             {"MaxIt": 3 , "nPop": 30})
